@@ -1,10 +1,12 @@
 // JWT signing and verification using the Web Crypto API (available in Workers).
 // All operations use P-256 / ES256 to match OpenID Federation 1.0 requirements.
 
+export type JWK = JsonWebKey & { kid: string };
+
 export interface KeyPair {
   publicKey:  CryptoKey;
   privateKey: CryptoKey;
-  publicJWK:  JsonWebKey;
+  publicJWK:  JWK;
   kid:        string;
 }
 
@@ -13,11 +15,9 @@ export async function generateKeyPair(kid: string): Promise<KeyPair> {
     { name: 'ECDSA', namedCurve: 'P-256' },
     true,
     ['sign', 'verify'],
-  );
-  const publicJWK = await crypto.subtle.exportKey('jwk', kp.publicKey);
-  publicJWK.kid = kid;
-  publicJWK.use = 'sig';
-  publicJWK.alg = 'ES256';
+  ) as CryptoKeyPair;
+  const raw = await crypto.subtle.exportKey('jwk', kp.publicKey) as JsonWebKey;
+  const publicJWK: JWK = { ...raw, kid, use: 'sig', alg: 'ES256' };
   return { publicKey: kp.publicKey, privateKey: kp.privateKey, publicJWK, kid };
 }
 

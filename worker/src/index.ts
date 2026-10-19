@@ -78,7 +78,7 @@ function notFound(msg: string): Response {
 // ── Router ────────────────────────────────────────────────────────────────────
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx?: ExecutionContext): Promise<Response> {
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         headers: {

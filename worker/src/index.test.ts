@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import worker from './index.js';
 
 const BASE_URL = 'http://localhost:8787';
