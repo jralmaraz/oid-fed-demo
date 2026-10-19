@@ -1,0 +1,20 @@
+{
+  "name": "oid-fed-demo-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-10-22",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // BASE_URL is set per-environment so Entity Configuration issuer claims
+  // match the actual deployment URL.
+  "vars": {
+    "BASE_URL": "http://localhost:8787"
+  },
+
+  "env": {
+    "production": {
+      "vars": {
+        "BASE_URL": "https://oid-fed-demo-worker.workers.dev"
+      }
+    }
+  }
+}
