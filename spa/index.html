@@ -87,12 +87,29 @@ svg.lines{overflow:visible}
 .idp-btn.selected{background:rgba(88,166,255,.1);border-color:var(--blue);color:var(--blue)}
 
 /* Entity config viewer */
-.ec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:14px}
+.ec-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:14px}
 .ec-card{background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:16px}
 .ec-card-title{font-size:13px;font-weight:700;margin-bottom:4px}
-.ec-card-id{font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:10px;word-break:break-all}
+.ec-card-id{font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:8px;word-break:break-all}
 .ec-field{font-size:12px;margin-bottom:4px}
 .ec-field label{color:var(--muted)}
+.ec-marks{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}
+.ec-jwks-btn{font-size:11px;font-weight:600;background:var(--surf);border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:3px 8px;cursor:pointer;margin-top:8px}
+.ec-jwks-btn:hover{border-color:var(--blue);color:var(--blue)}
+.ec-jwks-body{display:none;margin-top:8px}
+.ec-jwks-body.open{display:block}
+
+/* Trust Marks scene */
+.tm-matrix{width:100%;border-collapse:collapse;font-size:13px;margin-top:14px}
+.tm-matrix th{background:var(--surf2);padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);border-bottom:1px solid var(--border)}
+.tm-matrix td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tm-matrix tr:last-child td{border-bottom:none}
+.tm-check{color:var(--green);font-size:16px}
+.tm-cross{color:var(--border);font-size:16px}
+.tm-status-row{background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px}
+.tm-result{display:inline-block;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:700;margin-left:8px}
+.tm-result.active{background:rgba(63,185,80,.15);color:var(--green)}
+.tm-result.inactive{background:rgba(248,81,73,.12);color:var(--red)}
 
 .worker-url-note{background:rgba(255,166,87,.08);border:1px solid rgba(255,166,87,.25);border-radius:6px;padding:10px 14px;font-size:12px;color:var(--muted);margin-bottom:18px}
 .worker-url-note code{color:var(--orange);font-family:var(--mono)}
@@ -127,6 +144,10 @@ svg.lines{overflow:visible}
   <div class="nav-item" onclick="showScene('entities')">
     <div>Entity Explorer</div>
     <div class="nav-sub">Browse live Entity Configs</div>
+  </div>
+  <div class="nav-item" onclick="showScene('trustmarks')">
+    <div>Trust Marks</div>
+    <div class="nav-sub">Live compliance registry</div>
   </div>
   <hr class="sep">
   <div class="nav-item" onclick="showScene('about')">
@@ -269,7 +290,42 @@ svg.lines{overflow:visible}
   <div id="entities-container"></div>
 </div>
 
-<!-- ── Scene 5: About ── -->
+<!-- ── Scene 5: Trust Marks ── -->
+<div class="scene" id="scene-trustmarks">
+  <h1>Trust Marks</h1>
+  <p class="lead">Trust marks are JWTs the Trust Anchor issues to certify that an entity meets a specific compliance requirement. A Relying Party can require that an IdP holds a particular trust mark before accepting it — acting as a gatekeeping layer on top of the trust chain.</p>
+
+  <div class="card">
+    <div class="card-title">Compliance matrix — who holds what</div>
+    <div id="tm-matrix-container"><div style="color:var(--muted);font-size:13px">Loading…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Live status check — call <code style="font-family:var(--mono);font-size:11px;color:var(--orange)">/ta/trust_mark_status</code></div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">A trust mark can be revoked without updating the Entity Configuration. The TA's registry is the authoritative source — always check live before relying on an embedded trust mark.</p>
+    <div id="tm-status-container"><div style="color:var(--muted);font-size:13px">Loading…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">How trust marks work</div>
+    <div style="display:flex;flex-direction:column;gap:14px;font-size:13px">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(88,166,255,.15);border-radius:6px;padding:6px 10px;font-weight:800;color:var(--blue);font-size:16px;flex-shrink:0">1</div>
+        <div><strong>TA issues the trust mark</strong> — a <code style="font-family:var(--mono);font-size:11px;color:var(--orange)">trust-mark+jwt</code> signed by the TA with <code style="font-family:var(--mono);font-size:11px;color:var(--orange)">iss</code> = TA and <code style="font-family:var(--mono);font-size:11px;color:var(--orange)">sub</code> = the certified entity. The <code style="font-family:var(--mono);font-size:11px;color:var(--orange)">id</code> field identifies the compliance level.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(63,185,80,.15);border-radius:6px;padding:6px 10px;font-weight:800;color:var(--green);font-size:16px;flex-shrink:0">2</div>
+        <div><strong>Entity embeds it in their EC</strong> — under <code style="font-family:var(--mono);font-size:11px;color:var(--orange)">trust_marks[]</code>. Any verifier can decode the JWT, confirm <code style="font-family:var(--mono);font-size:11px;color:var(--orange)">iss</code> is a trusted TA, and verify the TA's signature without calling any endpoint.</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="background:rgba(188,140,255,.15);border-radius:6px;padding:6px 10px;font-weight:800;color:var(--purple);font-size:16px;flex-shrink:0">3</div>
+        <div><strong>RP can query the live registry</strong> — <code style="font-family:var(--mono);font-size:11px;color:var(--orange)">/ta/trust_mark_status</code> to confirm the mark hasn't been revoked since the EC was published. This is the check the RP performs before initiating an auth flow.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Scene 6: About ── -->
 <div class="scene" id="scene-about">
   <h1>Architecture</h1>
   <p class="lead">One Cloudflare Worker (TypeScript). One Cloudflare Pages site. Zero infrastructure cost.</p>
@@ -279,20 +335,32 @@ svg.lines{overflow:visible}
     <pre class="jwt">Worker:  https://oid-fed-demo-worker.workers.dev
 SPA:     https://oid-fed-demo.pages.dev
 
-Entity endpoints (all on the Worker):
-  GET /ta/.well-known/openid-federation        → Trust Anchor EC
+Entity Configuration endpoints (all entities):
+  GET /ta/.well-known/openid-federation           → Trust Anchor EC
   GET /idp/keycloak/.well-known/openid-federation → Keycloak EC
   GET /idp/okta/.well-known/openid-federation     → Okta EC
   GET /idp/entra/.well-known/openid-federation    → Entra EC
   GET /rp/portal/.well-known/openid-federation    → RP EC
 
-Federation API:
-  GET /ta/federation/fetch?sub=&lt;entity-id&gt;  → Subordinate Statement
-  GET /ta/federation/list                      → Member list
+Protocol JWKS endpoints (OIDC token-signing keys, separate from federation keys):
+  GET /idp/keycloak/protocol/openid-connect/certs → Keycloak JWKS
+  GET /idp/okta/v1/keys                           → Okta JWKS
+  GET /idp/entra/discovery/v2.0/keys              → Entra JWKS
+  GET /rp/portal/jwks.json                        → RP JWKS (for private_key_jwt auth)
 
-SPA API:
-  GET /api/chain?entity=keycloak|okta|entra    → Full trust chain (single call)
-  GET /api/state                               → Federation overview</pre>
+Federation API (OID-FED 1.0 spec §8):
+  GET /ta/federation/fetch?sub=&lt;entity-id&gt;         → Subordinate Statement (§8.1)
+  GET /ta/federation/list[?entity_type=...]          → Member list (§8.2)
+  GET /ta/federation/resolve?sub=&amp;trust_anchor=&amp;  → Resolved trust chain (§8.3)
+
+Trust Mark API (OID-FED 1.0 spec §7):
+  GET /ta/trust_mark_status?sub=&amp;trust_mark_id=    → Active/revoked status (§7.4)
+  GET /ta/trust_mark_list?trust_mark_id=             → Entities holding mark (§7.5)
+
+SPA convenience API:
+  GET /api/chain?entity=keycloak|okta|entra          → Full trust chain (single call)
+  GET /api/state                                     → Federation snapshot + stats
+  GET /healthz                                       → Health check</pre>
   </div>
 
   <div class="card">
@@ -330,7 +398,8 @@ function showScene(name) {
   document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
   document.querySelector(`.nav-item[onclick*="'${name}'"]`)?.classList.add('active');
   document.getElementById('scene-' + name).classList.add('active');
-  if (name === 'entities' && !entitiesLoaded) loadEntities();
+  if (name === 'entities'    && !entitiesLoaded)    loadEntities();
+  if (name === 'trustmarks'  && !trustmarksLoaded)  loadTrustMarks();
 }
 
 // ── N×M diagram ───────────────────────────────────────────────────────────────
@@ -457,6 +526,44 @@ async function runChain() {
       });
     }
 
+    // Step 4: federation/resolve — the spec's top-level call
+    await delay(400);
+    const sub = encodeURIComponent(data.entity);
+    const ta  = encodeURIComponent(data.summary.trust_anchor);
+    const resolveResp = await fetch(`${WORKER}/ta/federation/resolve?sub=${sub}&trust_anchor=${ta}`);
+    const resolveJWT  = await resolveResp.text();
+    const resolveDecoded = jwtDecode(resolveJWT);
+
+    const step4 = document.createElement('div');
+    step4.className = 'chain-step';
+    step4.innerHTML = `
+      <div class="chain-step-hdr" onclick="toggleStep(this)">
+        <div class="chain-step-num">4</div>
+        <div class="chain-step-label">Call federation/resolve — one endpoint, full answer</div>
+        <span class="chip chip-green">resolve-response+jwt</span>
+      </div>
+      <div class="chain-step-body open">
+        <div class="step-explain">
+          In practice an RP doesn't call all three steps above manually. It calls
+          <code style="font-family:var(--mono);font-size:11px;color:var(--orange)">/ta/federation/resolve?sub=&lt;entity&gt;&amp;trust_anchor=&lt;ta&gt;</code>
+          and gets back a single <strong>resolve-response+jwt</strong> — the full verified trust chain array
+          plus resolved metadata. This is the highest-level OID-FED API call and the one most real-world RPs use.
+        </div>
+        <div class="jwt-part">
+          <div class="jwt-part-label" style="color:var(--muted)">Decoded header</div>
+          <pre class="jwt">${esc(JSON.stringify(resolveDecoded.header, null, 2))}</pre>
+        </div>
+        <div class="jwt-part" style="margin-top:8px">
+          <div class="jwt-part-label" style="color:var(--muted)">Decoded payload (trust_chain array contains ${resolveDecoded.payload.trust_chain?.length ?? '?'} JWTs)</div>
+          <pre class="jwt">${esc(JSON.stringify({...resolveDecoded.payload, trust_chain: `[${resolveDecoded.payload.trust_chain?.length ?? '?'} JWTs — expand steps 1–3 above to see each one]`}, null, 2))}</pre>
+        </div>
+      </div>`;
+    container.appendChild(step4);
+    requestAnimationFrame(() => {
+      step4.classList.add('done');
+      setTimeout(() => step4.classList.add('visible'), 20);
+    });
+
     // Summary
     const summary = document.createElement('div');
     summary.style.cssText = 'background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.3);border-radius:8px;padding:16px;margin-top:10px;font-size:13px';
@@ -482,23 +589,15 @@ async function loadEntities() {
   const container = document.getElementById('entities-container');
   container.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px 0">Loading…</div>';
   try {
-    const resp = await fetch(`${WORKER}/api/state`);
-    const data = await resp.json();
-    const { federation } = data;
+    const data = await getStateData();
+    const { federation, trust_marks } = data;
 
     let html = '<div class="ec-grid" style="margin-top:16px">';
-
-    // Trust Anchor
-    html += ecCard('Trust Anchor', 'chip-blue', federation.trust_anchor.id, federation.trust_anchor.ec.payload, ['federation_entity']);
-
-    // IdPs
+    html += ecCard('Trust Anchor', 'chip-blue', federation.trust_anchor.id, federation.trust_anchor.ec.payload, ['federation_entity'], trust_marks);
     for (const idp of federation.idps) {
-      html += ecCard(idp.name, 'chip-orange', idp.id, idp.ec.payload, ['openid_provider']);
+      html += ecCard(idp.name, 'chip-orange', idp.id, idp.ec.payload, ['openid_provider'], trust_marks);
     }
-
-    // RP
-    html += ecCard(federation.rp.name, 'chip-green', federation.rp.id, federation.rp.ec.payload, ['openid_relying_party']);
-
+    html += ecCard(federation.rp.name, 'chip-green', federation.rp.id, federation.rp.ec.payload, ['openid_relying_party'], trust_marks);
     html += '</div>';
     container.innerHTML = html;
     entitiesLoaded = true;
@@ -507,30 +606,170 @@ async function loadEntities() {
   }
 }
 
-function ecCard(name, chipClass, entityID, payload, metaKeys) {
+const TM_DISPLAY = {
+  'certified-idp':     { label: 'Certified IdP',      chip: 'chip-blue'   },
+  'treasury-approved': { label: 'Treasury Approved',  chip: 'chip-orange' },
+  'verified-rp':       { label: 'Verified RP',        chip: 'chip-green'  },
+};
+
+function ecCard(name, chipClass, entityID, payload, metaKeys, trust_marks) {
   const md = payload?.metadata || {};
-  const hints = payload?.authority_hints ? `<div class="ec-field"><label>authority_hints: </label>${(payload.authority_hints).join(', ')}</div>` : '';
+  const hints = payload?.authority_hints
+    ? `<div class="ec-field"><label>authority_hints: </label><span style="word-break:break-all">${esc(payload.authority_hints.join(', '))}</span></div>`
+    : '';
+
   const metaSummary = metaKeys.map(k => {
     const m = md[k];
     if (!m) return '';
     const fields = Object.keys(m).map(f => {
       const v = JSON.stringify(m[f]);
-      return `<div class="ec-field"><label>${f}: </label><span style="word-break:break-all">${esc(v)}</span></div>`;
+      return `<div class="ec-field"><label>${esc(f)}: </label><span style="word-break:break-all">${esc(v)}</span></div>`;
     }).join('');
-    return `<div style="margin-top:6px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">${k}</div>${fields}`;
+    return `<div style="margin-top:6px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">${esc(k)}</div>${fields}`;
   }).join('');
 
+  // Trust mark chips — show which marks this entity holds
+  let marksHtml = '';
+  if (trust_marks) {
+    const chips = Object.entries(trust_marks)
+      .filter(([, holders]) => holders.includes(entityID))
+      .map(([markID]) => {
+        const slug = markID.split('/').pop();
+        const d = TM_DISPLAY[slug] || { label: slug, chip: 'chip-purple' };
+        return `<span class="chip ${d.chip}" title="${esc(markID)}">${esc(d.label)}</span>`;
+      }).join('');
+    if (chips) marksHtml = `<div class="ec-marks">${chips}</div>`;
+  }
+
+  // Protocol JWKS button — for entities with jwks_uri
+  const allMeta = Object.values(md).reduce((a, v) => ({ ...a, ...v }), {});
+  const jwksUri = allMeta.jwks_uri;
+  const uid = entityID.replace(/[^a-z0-9]/gi, '_');
+  const jwksHtml = jwksUri ? `
+    <button class="ec-jwks-btn" onclick="fetchJWKS('${esc(jwksUri)}','${uid}')">⬇ Fetch Protocol JWKS</button>
+    <div class="ec-jwks-body" id="jwks-${uid}"></div>` : '';
+
   return `<div class="ec-card">
-    <div class="ec-card-title">${esc(name)} <span class="chip ${chipClass}" style="margin-left:4px;font-size:10px">${metaKeys[0]}</span></div>
+    <div class="ec-card-title">${esc(name)} <span class="chip ${chipClass}" style="margin-left:4px;font-size:10px">${esc(metaKeys[0])}</span></div>
     <div class="ec-card-id">${esc(entityID)}</div>
+    ${marksHtml}
     ${metaSummary}
     ${hints}
+    ${jwksHtml}
   </div>`;
+}
+
+async function fetchJWKS(uri, uid) {
+  const body = document.getElementById('jwks-' + uid);
+  if (!body) return;
+  if (body.classList.contains('open')) { body.classList.remove('open'); return; }
+  body.classList.add('open');
+  body.innerHTML = '<div style="color:var(--muted);font-size:11px">Loading…</div>';
+  try {
+    const r = await fetch(`${WORKER}${new URL(uri).pathname}`);
+    const d = await r.json();
+    body.innerHTML = `<pre class="jwt" style="font-size:10px">${esc(JSON.stringify(d, null, 2))}</pre>`;
+  } catch(e) {
+    body.innerHTML = `<div style="color:var(--red);font-size:11px">${esc(e.message)}</div>`;
+  }
+}
+
+// ── Trust Marks ───────────────────────────────────────────────────────────────
+let trustmarksLoaded = false;
+let _stateCache = null;
+
+async function getStateData() {
+  if (_stateCache) return _stateCache;
+  const r = await fetch(`${WORKER}/api/state`);
+  _stateCache = await r.json();
+  return _stateCache;
+}
+
+async function loadTrustMarks() {
+  try {
+    const data = await getStateData();
+    const { federation, trust_marks } = data;
+
+    const allEntities = [
+      { id: federation.trust_anchor.id, name: 'Trust Anchor' },
+      ...federation.idps.map(i => ({ id: i.id, name: i.name })),
+      { id: federation.rp.id, name: federation.rp.name },
+    ];
+    const markIDs = Object.keys(trust_marks);
+
+    // Matrix table
+    let tableHtml = '<table class="tm-matrix"><thead><tr><th>Entity</th>';
+    markIDs.forEach(mid => {
+      const slug = mid.split('/').pop();
+      const d = TM_DISPLAY[slug] || { label: slug, chip: 'chip-purple' };
+      tableHtml += `<th><span class="chip ${d.chip}">${esc(d.label)}</span></th>`;
+    });
+    tableHtml += '</tr></thead><tbody>';
+    allEntities.forEach(e => {
+      tableHtml += `<tr><td style="font-size:12px">${esc(e.name)}<br><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">${esc(e.id.split('/').slice(-2).join('/'))}</span></td>`;
+      markIDs.forEach(mid => {
+        const has = (trust_marks[mid] || []).includes(e.id);
+        tableHtml += `<td style="text-align:center"><span class="${has ? 'tm-check' : 'tm-cross'}">${has ? '✓' : '—'}</span></td>`;
+      });
+      tableHtml += '</tr>';
+    });
+    tableHtml += '</tbody></table>';
+    document.getElementById('tm-matrix-container').innerHTML = tableHtml;
+
+    // Live status checks — one row per mark × entity combination that has the mark
+    let statusHtml = '';
+    markIDs.forEach(mid => {
+      const slug = mid.split('/').pop();
+      const d = TM_DISPLAY[slug] || { label: slug, chip: 'chip-purple' };
+      const holders = trust_marks[mid] || [];
+      holders.forEach(eid => {
+        const entity = allEntities.find(e => e.id === eid);
+        const rid = btoa(mid + '|' + eid).replace(/[^a-z0-9]/gi, '');
+        statusHtml += `<div class="tm-status-row">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="chip ${d.chip}">${esc(d.label)}</span>
+            <span style="font-size:12px;color:var(--muted)">→</span>
+            <span style="font-size:13px">${esc(entity?.name ?? eid)}</span>
+            <span id="tmr-${rid}" class="tm-result active">active</span>
+            <button class="btn btn-outline" style="padding:3px 10px;font-size:11px;margin-left:auto" onclick="checkTrustMark('${esc(mid)}','${esc(eid)}','${rid}')">↻ Check live</button>
+          </div>
+          <div style="font-size:10px;font-family:var(--mono);color:var(--muted);margin-top:5px">${esc(mid)}</div>
+        </div>`;
+      });
+    });
+    document.getElementById('tm-status-container').innerHTML = statusHtml || '<p style="color:var(--muted);font-size:13px">No trust marks found.</p>';
+
+    trustmarksLoaded = true;
+  } catch(e) {
+    document.getElementById('tm-matrix-container').innerHTML =
+      `<div style="color:var(--red);font-size:13px">${esc(e.message)}</div>`;
+  }
+}
+
+async function checkTrustMark(markID, sub, rid) {
+  const el = document.getElementById('tmr-' + rid);
+  if (el) el.textContent = '…';
+  try {
+    const r = await fetch(`${WORKER}/ta/trust_mark_status?sub=${encodeURIComponent(sub)}&trust_mark_id=${encodeURIComponent(markID)}`);
+    const d = await r.json();
+    if (el) {
+      el.textContent = d.active ? 'active' : 'inactive';
+      el.className = `tm-result ${d.active ? 'active' : 'inactive'}`;
+    }
+  } catch(e) {
+    if (el) { el.textContent = 'error'; el.className = 'tm-result inactive'; }
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function jwtDecode(token) {
+  const [h, p] = token.split('.');
+  const b64 = s => JSON.parse(atob(s.replace(/-/g,'+').replace(/_/g,'/')));
+  return { header: b64(h), payload: b64(p) };
+}
 </script>
 </body>
 </html>
