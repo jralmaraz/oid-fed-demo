@@ -513,7 +513,10 @@ function ecCard(name, chipClass, entityID, payload, metaKeys) {
   const metaSummary = metaKeys.map(k => {
     const m = md[k];
     if (!m) return '';
-    const fields = Object.keys(m).slice(0, 4).map(f => `<div class="ec-field"><label>${f}: </label>${JSON.stringify(m[f]).slice(0,60)}</div>`).join('');
+    const fields = Object.keys(m).map(f => {
+      const v = JSON.stringify(m[f]);
+      return `<div class="ec-field"><label>${f}: </label><span style="word-break:break-all">${esc(v)}</span></div>`;
+    }).join('');
     return `<div style="margin-top:6px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">${k}</div>${fields}`;
   }).join('');
 
