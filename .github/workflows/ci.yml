@@ -42,6 +42,43 @@ jobs:
         run: npm test
         working-directory: worker
 
+  # ── Conformance ──────────────────────────────────────────────────────────────
+  # Spins up wrangler dev inline, runs the 222-check OID-FED 1.0 discovery walk.
+  # Required check — blocks merge if any spec conformance check fails.
+
+  conformance:
+    name: OID-FED Conformance
+    runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: worker
+
+      - name: Start Worker (wrangler dev)
+        run: npx wrangler dev --port 8787 &
+        working-directory: worker
+
+      - name: Wait for Worker to be ready
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8787/healthz && echo "Worker ready" && exit 0
+            sleep 1
+          done
+          echo "Worker did not start in time" && exit 1
+
+      - name: Run OID-FED 1.0 conformance walk
+        run: npm run conformance
+        working-directory: worker
+
   # ── PR preview deploy ────────────────────────────────────────────────────────
   # Runs on every PR push. Deploys a short-lived Worker (pr-{N}) and a Pages
   # branch preview, then posts a ready-to-click comment on the PR.
@@ -101,10 +138,6 @@ jobs:
           SLUG=$(echo "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-\|-$//g')
           echo "url=https://${SLUG}.oid-fed-demo.pages.dev" >> "$GITHUB_OUTPUT"
         working-directory: .
-
-      - name: Run conformance suite against preview Worker
-        run: npm run conformance -- ${{ steps.worker.outputs.url }}
-        working-directory: worker
 
       - name: Post preview comment
         uses: actions/github-script@v7
