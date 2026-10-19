@@ -13,7 +13,7 @@
   "env": {
     "production": {
       "vars": {
-        "BASE_URL": "https://oid-fed-demo-worker.workers.dev"
+        "BASE_URL": "https://oid-fed-demo-worker-production.jralmaraz1.workers.dev"
       }
     }
   }

@@ -39,8 +39,8 @@ npx serve spa   # http://localhost:3000
 
 - **Module-level `_state`** — keys generated once per isolate cold-start (`getState()` in `index.ts`). All `/api/chain` calls within the same isolate are key-consistent. Isolate recycling is acceptable for a demo.
 - **Single-call chain** (`/api/chain`) — all three JWTs (EC + SubStmt + TA EC) built and decoded atomically in one request. Avoids cross-request key inconsistency.
-- **Entity IDs are URL prefixes** — `${BASE_URL}/ta`, `${BASE_URL}/idp/keycloak`, etc. `BASE_URL` is a Worker env var: `http://localhost:8787` (dev) or `https://oid-fed-demo-worker.workers.dev` (production).
-- **`wrangler.jsonc`** — two environments: default (dev) with `BASE_URL = "http://localhost:8787"`, `production` with `BASE_URL = "https://oid-fed-demo-worker.workers.dev"`.
+- **Entity IDs are URL prefixes** — `${BASE_URL}/ta`, `${BASE_URL}/idp/keycloak`, etc. `BASE_URL` is a Worker env var: `http://localhost:8787` (dev) or `https://oid-fed-demo-worker-production.jralmaraz1.workers.dev` (production).
+- **`wrangler.jsonc`** — two environments: default (dev) with `BASE_URL = "http://localhost:8787"`, `production` with `BASE_URL = "https://oid-fed-demo-worker-production.jralmaraz1.workers.dev"`.
 
 ## File map
 

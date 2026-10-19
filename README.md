@@ -3,7 +3,7 @@
 Visual, interactive demo of [OpenID Federation 1.0](https://openid.net/specs/openid-federation-1_0.html) — showing how a Trust Anchor reduces N×M bilateral IdP ↔ RP configurations to O(N+M) Entity Configurations.
 
 **Live demo**: https://oid-fed-demo.pages.dev  
-**Worker API**: https://oid-fed-demo-worker.workers.dev
+**Worker API**: https://oid-fed-demo-worker-production.jralmaraz1.workers.dev
 
 ## Narrative
 
