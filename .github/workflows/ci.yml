@@ -102,6 +102,10 @@ jobs:
           echo "url=https://${SLUG}.oid-fed-demo.pages.dev" >> "$GITHUB_OUTPUT"
         working-directory: .
 
+      - name: Run conformance suite against preview Worker
+        run: npm run conformance -- ${{ steps.worker.outputs.url }}
+        working-directory: worker
+
       - name: Post preview comment
         uses: actions/github-script@v7
         with:
